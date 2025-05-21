@@ -1,3 +1,5 @@
+using System;
+using System.Threading;
 using System.Collections.Generic;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
@@ -9,6 +11,7 @@ namespace Ecosystem.AI.GOAP
     [RequireComponent(typeof(WorldStateGenerator), typeof(Planner))]
     public class Brain : MonoBehaviour
     {
+        private CancellationTokenSource cancellationSource;
         private WorldStateGenerator worldStateGenerator;
         private Planner currentPlanner;
         [SerializeField]
@@ -24,28 +27,34 @@ namespace Ecosystem.AI.GOAP
             currentPlanner = GetComponent<Planner>();
         }
 
-        private void Start()
+        private void OnEnable()
         {
-            BrainLoop().Forget();
+            cancellationSource = new CancellationTokenSource();
+            BrainLoop(cancellationSource.Token).Forget();
         }
 
-        private async UniTaskVoid BrainLoop()
+        private void OnDisable()
         {
-            while (true)
+            cancellationSource.Cancel();
+        }
+
+        private async UniTask BrainLoop(CancellationToken cancellationToken)
+        {
+            while (gameObject.activeInHierarchy)
             {
+                if(cancellationToken.IsCancellationRequested) return;
+                
                 var currentState = worldStateGenerator.Construct();
                 var status = currentState.GetValue<EStatus>(DictionaryKeys.Status());
 
                 switch (status)
                 {
                     case EStatus.Danger:
-                        Debug.Log(gameObject.name + "Danger mode");
                         goal = new Goal();
                         goal.Conditions.Add(DictionaryKeys.Status(), EStatus.Safe);
                         currentPlanner = dangerPlanner;
                         break;
                     case EStatus.Safe:
-                        Debug.Log(gameObject.name + "Safe mode");
                         goal = new Goal();
                         goal.Conditions.Add(DictionaryKeys.ChildTotal(), currentState.GetValue<int>(DictionaryKeys.ChildTotal()) + 1);
                         currentPlanner = safePlanner;
@@ -56,22 +65,25 @@ namespace Ecosystem.AI.GOAP
                 {
                     foreach (var action in path)
                     {
-                        var task = await UniTask.WhenAny(action.Perform(gameObject), EvuluateCriticalConditions());
+                        var task = await UniTask.WhenAny(
+                            action.Perform(gameObject, cancellationToken),
+                            EvuluateCriticalConditions(cancellationToken));
                         if (!task.result1 || task.result2)
                             break;
                     }
                 }
 
-                await UniTask.NextFrame();
+                await UniTask.NextFrame(cancellationToken);
             }
         }
 
-        private async UniTask<bool> EvuluateCriticalConditions()
+        private async UniTask<bool> EvuluateCriticalConditions(CancellationToken cancellationToken)
         {
             do
             {
-                await UniTask.NextFrame();
-            } while (!worldStateGenerator.IsChangedCriticalCondition());
+                cancellationToken.ThrowIfCancellationRequested();
+                await UniTask.NextFrame(cancellationToken);
+            } while (!worldStateGenerator.IsChangedCriticalCondition() && gameObject.activeInHierarchy);
 
             return true;
         }

@@ -13,7 +13,7 @@ namespace Ecosystem.AI.GOAP
 
         public override bool Evaluate(WorldState worldState)
         {
-            return worldState.GetValue<float>(DictionaryKeys.Hunger()) > minHunger;
+            return worldState.GetValue<float>(DictionaryKeys.Hunger()) >= minHunger;
         }
     }
 }

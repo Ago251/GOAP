@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using System;
+using System.Threading;
 using UnityEngine;
 
 namespace Ecosystem.AI.GOAP
@@ -10,6 +11,6 @@ namespace Ecosystem.AI.GOAP
         public abstract Precondition[] Preconditions { get; }
         public abstract Effect[] Effects { get; }
 
-        public abstract UniTask<bool> Perform(GameObject agent);
+        public abstract UniTask<bool> Perform(GameObject agent, CancellationToken cancellationToken);
     }
 }

@@ -4,6 +4,7 @@ using UnityEngine.AI;
 using Cysharp.Threading.Tasks;
 using Ecosystem.Enum;
 using System;
+using System.Threading;
 
 namespace Ecosystem.AI.GOAP
 {
@@ -21,21 +22,19 @@ namespace Ecosystem.AI.GOAP
 
         public override Effect[] Effects => new Effect[] { new HasObjectNearEffect(enemyType.ToString(), true), new ChangedStatusEffect(EStatus.Safe) };
 
-        public override async UniTask<bool> Perform(GameObject agent)
+        public override async UniTask<bool> Perform(GameObject agent, CancellationToken cancellationToken)
         {
-            if (agent.TryGetComponent(out Vision vision))
+            if (!agent.TryGetComponent(out Vision vision)) return true;
+            
+            enemies = vision.GetSeenNutriment(enemyType);
+            
+            if (!agent.TryGetComponent(out NavMeshAgent navmeshAgent)) return true;
+            
+            while (GetDistanceFromEnemies(agent) < fleeRange)
             {
-                enemies = vision.GetSeenNutriment(enemyType);
-                if (agent.TryGetComponent(out NavMeshAgent navmeshAgent))
-                {
-                    navmeshAgent.isStopped = false;
-                    while (GetDistanceFromEnemies(agent) < fleeRange)
-                    {
-                        navmeshAgent.SetDestination(agent.transform.position + GetFleeDirection(agent) * 5);
-                        await UniTask.NextFrame();
-                    }
-                    navmeshAgent.isStopped = true;
-                }
+                cancellationToken.ThrowIfCancellationRequested();
+                navmeshAgent.SetDestination(agent.transform.position + GetFleeDirection(agent) * 5);
+                await UniTask.NextFrame(cancellationToken);
             }
 
             return true;

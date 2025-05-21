@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Threading;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 using Ecosystem.Enum;
 using Ecosystem.Utility;
 using Ecosystem.Animals;
+using UnityEngine.Analytics;
 
 namespace Ecosystem.AI.GOAP
 {
@@ -24,18 +26,22 @@ namespace Ecosystem.AI.GOAP
 
         public override Effect[] Effects => new Effect[] { new ProcreateEffect() };
 
-        public override UniTask<bool> Perform(GameObject agent)
+        public override UniTask<bool> Perform(GameObject agent, CancellationToken cancellationToken)
         {
-            if (agent.TryGetComponent(out Vision vision))
+            if (!agent.TryGetComponent(out Vision vision)) return UniTask.FromResult(true);
+            
+            var myAnimal = agent.GetComponent<Animal>();
+            var animalType = AnimalUtility.GetAnimalEnum(myAnimal);
+            var animalOppositeGender = AnimalUtility.GetNearestOppositeGenderAnimal(myAnimal, vision.GetSeenAnimal(animalType));
+
+            if (animalOppositeGender != null)
             {
-                var myAnimal = agent.GetComponent<Animal>();
-                var animalType = AnimalUtility.GetAnimalEnum(myAnimal);
-                var animalOppositeGender = AnimalUtility.GetNearestOppositeGenderAnimal(myAnimal, vision.GetSeenAnimal(animalType));
-
                 myAnimal.Procreate(myAnimal, animalOppositeGender);
+                return UniTask.FromResult(true);
             }
+            else
+                return UniTask.FromResult(false);
 
-            return UniTask.FromResult(true);
         }
     }
 }

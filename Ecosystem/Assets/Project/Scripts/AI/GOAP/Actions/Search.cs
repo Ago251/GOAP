@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.AI;
 using Cysharp.Threading.Tasks;
@@ -18,24 +19,19 @@ namespace Ecosystem.AI.GOAP
 
         public override Effect[] Effects => new Effect[] { new HasObjectNearEffect(nutriment.ToString()) , new ObjectiveEffect(true)   };
 
-        public async override UniTask<bool> Perform(GameObject agent)
+        public override async UniTask<bool> Perform(GameObject agent, CancellationToken cancellationToken)
         {
-            if (agent.TryGetComponent(out Vision vision))
+            if (!agent.TryGetComponent(out Vision vision) || !agent.TryGetComponent(out NavMeshAgent navMeshAgent)) return true;
+            
+            while (vision.GetSeenNutriment(nutriment).Count == 0)
             {
-                if (agent.TryGetComponent(out NavMeshAgent navMeshAgent))
+                cancellationToken.ThrowIfCancellationRequested();
+                if (navMeshAgent.remainingDistance <= arriveDistance)
                 {
-                    navMeshAgent.isStopped = false;
-                    while (vision.GetSeenNutriment(nutriment).Count == 0)
-                    {
-                        if (navMeshAgent.remainingDistance <= arriveDistance)
-                        {
-                            var randomPosition = GetRandomPosition(agent);
-                            navMeshAgent.SetDestination(randomPosition);
-                        }
-                        await UniTask.NextFrame();
-                    }
-                    navMeshAgent.isStopped = true;
+                    var randomPosition = GetRandomPosition(agent);
+                    navMeshAgent.SetDestination(randomPosition);
                 }
+                await UniTask.NextFrame(cancellationToken);
             }
 
             return true;
@@ -46,12 +42,7 @@ namespace Ecosystem.AI.GOAP
             Vector2 randomPoint = Random.insideUnitCircle * maxRadius;
             Vector3 randomPosition = new Vector3(randomPoint.x, 0, randomPoint.y) + agent.transform.position;
 
-            if (NavMesh.SamplePosition(randomPosition, out var hit, maxRadius, NavMesh.AllAreas))
-            {
-                return hit.position;
-            }
-
-            return agent.transform.position;
+            return NavMesh.SamplePosition(randomPosition, out var hit, maxRadius, NavMesh.AllAreas) ? hit.position : agent.transform.position;
         }
     }
 }

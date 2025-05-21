@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 using Ecosystem.Enum;
@@ -19,27 +20,20 @@ namespace Ecosystem.AI.GOAP
 
         public override Effect[] Effects => new Effect[] { new DrinkEffect(), new ObjectiveEffect(false) };
 
-        public override UniTask<bool> Perform(GameObject agent)
+        public override UniTask<bool> Perform(GameObject agent, CancellationToken cancellationToken)
         {
-            if (agent.TryGetComponent(out Vision vision))
-            {
-                var nearestTarget = FindUtility.GetNearestTargets(agent, vision.GetSeenLiquid(liquid));
-                if (nearestTarget != null)
-                {
-                    var animal = agent.GetComponent<Animal>();
-                    var drinkable = nearestTarget.GetComponent<IDrinkable>();
-                    if (drinkable != null)
-                    {
-                        animal.Drink(drinkable);
-                    }
-                    else
-                    {
-                        return UniTask.FromResult(false);
-                    }
-                }
-            }
+            if (!agent.TryGetComponent(out Vision vision)) return UniTask.FromResult(true);
+            
+            var nearestTarget = FindUtility.GetNearestTargets(agent, vision.GetSeenLiquid(liquid));
 
+            if (nearestTarget == null) return UniTask.FromResult(true);
+            
+            var animal = agent.GetComponent<Animal>();
+            var drinkable = nearestTarget.GetComponent<IDrinkable>();
+            if (drinkable == null) return UniTask.FromResult(false);
+            animal.Drink(drinkable);
             return UniTask.FromResult(true);
+
         }
     }
 }
