@@ -14,13 +14,10 @@ namespace Ecosystem.Animals
 
             StatType[] stats = (StatType[])System.Enum.GetValues(typeof(StatType));
 
-            bool fromAnimalA = false;
-
             foreach (var stat in stats)
             {
-                child.StatTracker[stat] = fromAnimalA ? animalA.StatTracker[stat] : 
-                                                        animalB.StatTracker[stat];
-                fromAnimalA = !fromAnimalA;
+                animalA.StatTracker[stat].CurrentValue -= 50;
+                child.StatTracker[stat].SetRandomValue();
             }
 
             var isMale = Random.Range(0, 1);

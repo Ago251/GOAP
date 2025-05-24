@@ -5,6 +5,7 @@ using UnityEngine;
 using Cysharp.Threading.Tasks;
 using Ecosystem.AI.GOAP.Utility;
 using Ecosystem.Enum;
+using System.Linq;
 
 namespace Ecosystem.AI.GOAP
 {
@@ -15,9 +16,7 @@ namespace Ecosystem.AI.GOAP
         private WorldStateGenerator worldStateGenerator;
         private Planner currentPlanner;
         [SerializeField]
-        private Planner safePlanner;
-        [SerializeField]
-        private Planner dangerPlanner;
+        private Planner planner;
 
         private Goal goal;
 
@@ -42,32 +41,20 @@ namespace Ecosystem.AI.GOAP
         {
             while (gameObject.activeInHierarchy)
             {
-                if(cancellationToken.IsCancellationRequested) return;
-                
+                if (cancellationToken.IsCancellationRequested) return;
+
                 var currentState = worldStateGenerator.Construct();
-                var status = currentState.GetValue<EStatus>(DictionaryKeys.Status());
 
-                switch (status)
-                {
-                    case EStatus.Danger:
-                        goal = new Goal();
-                        goal.Conditions.Add(DictionaryKeys.Status(), EStatus.Safe);
-                        currentPlanner = dangerPlanner;
-                        break;
-                    case EStatus.Safe:
-                        goal = new Goal();
-                        goal.Conditions.Add(DictionaryKeys.ChildTotal(), currentState.GetValue<int>(DictionaryKeys.ChildTotal()) + 1);
-                        currentPlanner = safePlanner;
-                        break;
-                }
+                goal = new Goal();
+                goal.Conditions.Add(DictionaryKeys.ChildTotal(), currentState.GetValue<int>(DictionaryKeys.ChildTotal()) + 1);
 
-                if (currentPlanner.Plan(currentState, goal, new List<Action>(), out var path))
+                if (planner.Plan(currentState, goal, new List<Action>(), out var path))
                 {
                     foreach (var action in path)
                     {
                         var task = await UniTask.WhenAny(
                             action.Perform(gameObject, cancellationToken),
-                            EvuluateCriticalConditions(cancellationToken));
+                            EvuluateCriticalConditions(action, cancellationToken));
                         if (!task.result1 || task.result2)
                             break;
                     }
@@ -77,13 +64,14 @@ namespace Ecosystem.AI.GOAP
             }
         }
 
-        private async UniTask<bool> EvuluateCriticalConditions(CancellationToken cancellationToken)
+        private async UniTask<bool> EvuluateCriticalConditions(Action action, CancellationToken cancellationToken)
         {
+            var currentState = worldStateGenerator.Construct();
             do
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 await UniTask.NextFrame(cancellationToken);
-            } while (!worldStateGenerator.IsChangedCriticalCondition() && gameObject.activeInHierarchy);
+            } while (action.Preconditions.All(y => y.Evaluate(worldStateGenerator.Construct())));
 
             return true;
         }

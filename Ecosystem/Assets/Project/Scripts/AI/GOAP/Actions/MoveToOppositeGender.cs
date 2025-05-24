@@ -18,7 +18,7 @@ namespace Ecosystem.AI.GOAP
 
         private GameObject target;
 
-        public override Precondition[] Preconditions => new Precondition[] { new HasObjectNearPrecondition("Animal_Opposite_Gender") };
+        public override Precondition[] Preconditions => new Precondition[] { new HasObjectNearPrecondition("Animal_Opposite_Gender"), new HasStatus(EStatus.Safe)  };
 
         public override Effect[] Effects => new Effect[] { new ObjectInActionRange("Animal_Opposite_Gender")  };
 

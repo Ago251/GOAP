@@ -53,5 +53,7 @@ namespace Ecosystem.Animals.Stats
         {
             CurrentValue -= decay * Time.deltaTime;
         }
+
+        public void SetRandomValue() => currentValue = UnityEngine.Random.Range(0, 65f);
     }
 }

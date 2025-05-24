@@ -18,7 +18,7 @@ namespace Ecosystem.AI.GOAP
 
         private GameObject target;
 
-        public override Precondition[] Preconditions => new Precondition[] { new HasObjectNearPrecondition(targetType.ToString()) };
+        public override Precondition[] Preconditions => new Precondition[] { new HasObjectNearPrecondition(targetType.ToString()), new HasStatus(EStatus.Safe)  };
 
         public override Effect[] Effects => new Effect[] { new ObjectInActionRange(targetType.ToString()) };
 

@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Threading;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 using Cysharp.Threading.Tasks;
 using Ecosystem.Enum;
-using System;
-using System.Threading;
 
 namespace Ecosystem.AI.GOAP
 {
@@ -18,7 +18,7 @@ namespace Ecosystem.AI.GOAP
 
         private List<GameObject> enemies;
 
-        public override Precondition[] Preconditions => new Precondition[] { new HasObjectNearPrecondition(enemyType.ToString()) };
+        public override Precondition[] Preconditions => new Precondition[] { new HasStatus(EStatus.Danger) };
 
         public override Effect[] Effects => new Effect[] { new HasObjectNearEffect(enemyType.ToString(), true), new ChangedStatusEffect(EStatus.Safe) };
 

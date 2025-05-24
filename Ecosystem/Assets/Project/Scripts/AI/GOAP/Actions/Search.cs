@@ -15,7 +15,7 @@ namespace Ecosystem.AI.GOAP
         [SerializeField] private float arriveDistance;
         [SerializeField] private float maxRadius;
 
-        public override Precondition[] Preconditions => new Precondition[] { new HasStatus(Enum.EStatus.Safe), new HasObjective(true) };
+        public override Precondition[] Preconditions => new Precondition[] { new HasStatus(Enum.EStatus.Safe), new HasObjective(true), new HasNeedNutriment(nutriment) };
 
         public override Effect[] Effects => new Effect[] { new HasObjectNearEffect(nutriment.ToString()) , new ObjectiveEffect(true)   };
 

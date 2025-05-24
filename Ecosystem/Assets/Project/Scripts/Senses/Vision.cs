@@ -115,7 +115,7 @@ namespace Ecosystem
             switch (liquid)
             {
                 case ELiquid.Water:
-                    gameObjects = GetVisibleObjects<Rabbit>().Select(item => item.gameObject).ToList();
+                    gameObjects = GetVisibleObjects<LiquidItem>().Select(item => item.gameObject).ToList();
                     break;
                 case ELiquid.None:
                     return gameObjects;
